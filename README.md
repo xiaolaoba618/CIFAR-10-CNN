@@ -11,6 +11,7 @@ CNN进阶识别彩色图像/
 ├── train.py              # 训练脚本（Warmup+余弦退火、EarlyStopping）
 ├── utils.py              # 数据加载、增强、设备选择、单轮训练/验证
 ├── test.py               # 加载权重，测试集评估
+├── app.py                # 桌面 App：拖拽图片即可识别（支持打包为 exe）
 ├── residuals_cifar10_cnn.pth  # 训练后生成的残差模型权重
 └── data/                 # CIFAR-10 数据集
 ```
@@ -85,8 +86,40 @@ python train.py
 
 # 测试集评估
 python test.py
+
+# 桌面 App：拖拽图片即可识别
+python app.py
 ```
+
+## 桌面 App（拖拽识别）
+
+`app.py` 是一个简易的图形界面小工具：
+
+- 把任意图片 **拖入窗口**（或点击「选择图片」），程序自动把图片缩放为 **32×32**，
+  再用 `residuals_cifar10_cnn.pth` 推理，显示 **中文/英文类别 + 置信度** 与 Top-3 概率。
+- 依赖：`tkinter`（Python 自带）、`tkinterdnd2`（拖拽支持，未安装时自动降级为按钮选择）、`Pillow`。
+
+> **为什么是 32×32 而不是更大？** 模型在 32×32 上训练，输入尺寸必须与训练一致。
+> 实测：32×32 时测试准确率约 **90%**，而喂 64×64 会掉到约 **22%**（分布不匹配）。
+
+## 打包为 exe
+
+用 PyInstaller 把 app 打成 Windows 可执行程序（模型权重一并打包）：
+
+```bash
+pyinstaller --noconfirm --clean --windowed ^
+  --name "CIFAR10识别" ^
+  --collect-all tkinterdnd2 ^
+  --add-data "residuals_cifar10_cnn.pth;." ^
+  app.py
+```
+
+- 产物在 `dist/CIFAR10识别/`，双击其中的 `CIFAR10识别.exe` 即可运行（无需装 Python）。
+- `--windowed` 表示不弹黑色控制台窗口；`--add-data ...;.` 把权重文件打进程序。
+- 因为内置了 PyTorch，`dist/` 体积较大（数百 MB ~ 1GB+），属正常现象。
 
 ## 环境
 
-Python 3.13 · PyTorch · torchvision · numpy（GPU 可选，CPU 亦可运行）
+- 训练/评估：复用 `CNN_MINIST/.venv`（torch 2.14.1+cu130 / torchvision 0.29.1+cu130）
+- 桌面 App 与打包：`D:\anaconda3\envs\pt_study`（Python 3.13 · PyTorch · torchvision · Pillow · tkinterdnd2 · pyinstaller）
+- GPU 可选，CPU 亦可运行

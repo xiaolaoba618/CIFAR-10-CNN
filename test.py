@@ -12,7 +12,7 @@ import torch.nn as nn
 from model import CIFAR_CNN
 from utils import DEVICE, get_dataloaders, run_epoch
 
-CKPT_PATH = "best_cifar10_cnn.pth"
+CKPT_PATH = "residuals_cifar10_cnn.pth"
 
 
 def load_model(ckpt_path=CKPT_PATH, device=DEVICE):

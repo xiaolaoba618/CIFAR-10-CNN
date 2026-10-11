@@ -20,14 +20,14 @@ from utils import DEVICE, get_dataloaders, run_epoch
 
 # %% 训练超参数
 DROPOUT = 0.4
-WARMUP_EPOCHS = 3
+WARMUP_EPOCHS = 5
 MAX_LR = 1e-2
 MIN_LR = 1e-5
 WEIGHT_DECAY = 1e-3
-TOTAL_EPOCHS = 20         # 余弦退火的总日程
-MAX_EPOCHS = 20            # 实际最多训练轮数
-PATIENCE = 4             # 验证损失连续 PATIENCE 轮不下降就早停
-CKPT_PATH = "best_cifar10_cnn.pth"
+TOTAL_EPOCHS = 45         # 余弦退火的总日程
+MAX_EPOCHS = 45            # 实际最多训练轮数
+PATIENCE = 10            # 验证损失连续 PATIENCE 轮不下降就早停
+CKPT_PATH = "residuals_cifar10_cnn.pth"
 
 
 def build_scheduler(optimizer):

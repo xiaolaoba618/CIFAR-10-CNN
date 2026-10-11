@@ -61,7 +61,7 @@ CNN进阶识别彩色图像/
 > 环境复用 `CNN_MINIST/.venv`（torch 2.14.1+cu130 / torchvision 0.29.1+cu130）。
 
 ```bash
-# 训练（生成 best_cifar10_cnn.pth）
+# 训练（生成 residuals_cifar10_cnn.pth）
 python train.py
 
 # 测试集评估

@@ -97,7 +97,7 @@ python app.py
 
 - 把任意图片 **拖入窗口**（或点击「选择图片」），程序自动把图片缩放为 **32×32**，
   再用 `residuals_cifar10_cnn.pth` 推理，显示 **中文/英文类别 + 置信度** 与 Top-3 概率。
-- 依赖：`tkinter`（Python 自带）、`tkinterdnd2`（拖拽支持，未安装时自动降级为按钮选择）、`Pillow`。
+- 依赖：`tkinter`（Python 自带）、`tkinterdnd2`（拖拽支持，未安装时自动降级为按钮选择）、`Pillow`、`numpy`（刻意不用 torchvision，便于打包）。
 
 > **为什么是 32×32 而不是更大？** 模型在 32×32 上训练，输入尺寸必须与训练一致。
 > 实测：32×32 时测试准确率约 **90%**，而喂 64×64 会掉到约 **22%**（分布不匹配）。
@@ -110,13 +110,18 @@ python app.py
 pyinstaller --noconfirm --clean --windowed ^
   --name "CIFAR10识别" ^
   --collect-all tkinterdnd2 ^
+  --exclude-module torchvision --exclude-module matplotlib ^
+  --exclude-module scipy --exclude-module pandas --exclude-module IPython ^
   --add-data "residuals_cifar10_cnn.pth;." ^
   app.py
 ```
 
 - 产物在 `dist/CIFAR10识别/`，双击其中的 `CIFAR10识别.exe` 即可运行（无需装 Python）。
 - `--windowed` 表示不弹黑色控制台窗口；`--add-data ...;.` 把权重文件打进程序。
-- 因为内置了 PyTorch，`dist/` 体积较大（数百 MB ~ 1GB+），属正常现象。
+- **app 刻意不依赖 torchvision**（预处理用 PIL + torch 手写），否则打包后启动会报
+  `RuntimeError: operator torchvision::nms does not exist`。
+- 因为内置了内置 CUDA 的 PyTorch，`dist/` 体积较大（约 3GB），属正常现象；
+  若只需 CPU 推理，可换装 CPU 版 torch 后重打包以大幅瘦身。
 
 ## 环境
 

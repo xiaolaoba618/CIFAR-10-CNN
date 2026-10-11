@@ -16,15 +16,14 @@ CIFAR-10 彩色图像分类 —— 拖拽识别小工具（桌面 App）
 import os
 import sys
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from torchvision import transforms
 
 from model import CIFAR_CNN
-from utils import DEVICE, MEAN, STD
 
 # 拖拽支持（tkinterdnd2 未安装时自动降级为「选择图片」按钮）
 try:
@@ -35,17 +34,34 @@ except Exception:                                     # pragma: no cover
 
 INPUT_SIZE = 32                                       # 与训练一致，切勿改成 64（会严重掉点）
 MODEL_FILE = "residuals_cifar10_cnn.pth"
+MEAN = (0.4914, 0.4822, 0.4465)                       # CIFAR-10 官方 RGB 均值（与训练一致）
+STD = (0.2023, 0.1994, 0.2010)                        # CIFAR-10 官方 RGB 标准差（与训练一致）
 
 CLASSES_EN = ["airplane", "automobile", "bird", "cat", "deer",
               "dog", "frog", "horse", "ship", "truck"]
 CLASSES_CN = ["飞机", "汽车", "鸟", "猫", "鹿", "狗", "青蛙", "马", "船", "卡车"]
 
-# 与训练完全一致的预处理：先缩放到 32×32，再 ToTensor + 按 CIFAR-10 官方均值方差标准化
-PREPROCESS = transforms.Compose([
-    transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize(MEAN, STD),
-])
+# 设备选择（与 utils.py 保持一致，这里内联，使 app 不依赖 utils / torchvision）
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cpu")
+
+
+def preprocess(pil_img):
+    """等价于 transforms.Compose([Resize((32,32)), ToTensor(), Normalize(MEAN, STD)])。
+
+    这里用 PIL + torch、numpy 手写，刻意不依赖 torchvision，
+    以免 PyInstaller 打包后出现 "operator torchvision::nms does not exist" 之类的问题。
+    """
+    img = pil_img.convert("RGB").resize((INPUT_SIZE, INPUT_SIZE), Image.BILINEAR)
+    x = torch.from_numpy(np.asarray(img, dtype="float32") / 255.0)   # HWC, 取值 [0,1]
+    x = x.permute(2, 0, 1).contiguous()                              # -> CHW
+    mean = torch.tensor(MEAN, dtype=torch.float32).view(3, 1, 1)
+    std = torch.tensor(STD, dtype=torch.float32).view(3, 1, 1)
+    return (x - mean) / std
 
 
 def resource_path(name):
@@ -72,7 +88,7 @@ def load_model():
 @torch.no_grad()
 def predict(model, pil_img):
     """输入 PIL 图片，返回 (top1 索引, 概率列表)。"""
-    x = PREPROCESS(pil_img.convert("RGB")).unsqueeze(0).to(DEVICE)
+    x = preprocess(pil_img).unsqueeze(0).to(DEVICE)
     probs = F.softmax(model(x), dim=1)[0]
     top1 = int(probs.argmax().item())
     return top1, probs.cpu().tolist()
